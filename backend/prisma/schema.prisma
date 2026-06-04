@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ───────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  username        String   @unique
+  passwordHash    String   @map("password_hash")
+  profilePicture  String?  @map("profile_picture")
+  avatarStage     Int      @default(1) @map("avatar_stage")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  refreshTokens        RefreshToken[]
+  userVirtues          UserVirtue[]
+  actionLogs           ActionLog[]
+  intentions           Intention[]
+  blessings            Blessing[]
+  reflections          Reflection[]
+  gratitudeObligations GratitudeObligation[]
+  storyChapters        StoryChapter[]
+  mentorMessages       MentorMessage[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
+}
+
+// ─── Virtues ────────────────────────────────────────────────────────────────────
+
+model Virtue {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String
+  icon        String @default("⭐")
+
+  userVirtues   UserVirtue[]
+  actionVirtues ActionVirtue[]
+
+  @@map("virtues")
+}
+
+model UserVirtue {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  virtueId String @map("virtue_id")
+  virtue   Virtue @relation(fields: [virtueId], references: [id], onDelete: Cascade)
+  score    Float  @default(0)
+  level    Int    @default(1)
+
+  @@unique([userId, virtueId])
+  @@map("user_virtues")
+}
+
+// ─── Action Logs ────────────────────────────────────────────────────────────────
+
+model ActionLog {
+  id          String     @id @default(uuid())
+  userId      String     @map("user_id")
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionText  String     @map("action_text")
+  actionType  ActionType @default(GOOD) @map("action_type")
+  impact      Float      @default(0)
+  confidence  Float      @default(0)
+  aiAnalysis  Json?      @map("ai_analysis")
+  source      LogSource  @default(TEXT)
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  actionVirtues ActionVirtue[]
+
+  @@map("action_logs")
+}
+
+enum ActionType {
+  GOOD
+  NEGATIVE
+}
+
+enum LogSource {
+  TEXT
+  VOICE
+}
+
+model ActionVirtue {
+  id          String    @id @default(uuid())
+  actionLogId String    @map("action_log_id")
+  actionLog   ActionLog @relation(fields: [actionLogId], references: [id], onDelete: Cascade)
+  virtueId    String    @map("virtue_id")
+  virtue      Virtue    @relation(fields: [virtueId], references: [id], onDelete: Cascade)
+  impact      Float     @default(0)
+
+  @@unique([actionLogId, virtueId])
+  @@map("action_virtues")
+}
+
+// ─── Intentions ─────────────────────────────────────────────────────────────────
+
+model Intention {
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      IntentionStatus @default(ACTIVE)
+  progress    Float           @default(0)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  completedAt DateTime?       @map("completed_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@map("intentions")
+}
+
+enum IntentionStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  ABANDONED
+}
+
+// ─── Blessings ──────────────────────────────────────────────────────────────────
+
+model Blessing {
+  id                String       @id @default(uuid())
+  userId            String       @map("user_id")
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  description       String?
+  blessingType      BlessingType @default(UNEXPECTED) @map("blessing_type")
+  significanceScore Float        @default(0) @map("significance_score")
+  reflection        String?
+  aiAnalysis        Json?        @map("ai_analysis")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  gratitudeObligations GratitudeObligation[]
+
+  @@map("blessings")
+}
+
+enum BlessingType {
+  EXPECTED
+  UNEXPECTED
+}
+
+// ─── Reflections ────────────────────────────────────────────────────────────────
+
+model Reflection {
+  id             String         @id @default(uuid())
+  userId         String         @map("user_id")
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reflectionType ReflectionType @default(DAILY) @map("reflection_type")
+  generatedText  String         @map("generated_text")
+  userNotes      String?        @map("user_notes")
+  periodStart    DateTime       @map("period_start")
+  periodEnd      DateTime       @map("period_end")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  @@map("reflections")
+}
+
+enum ReflectionType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// ─── Gratitude Obligations ──────────────────────────────────────────────────────
+
+model GratitudeObligation {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blessingId      String    @map("blessing_id")
+  blessing        Blessing  @relation(fields: [blessingId], references: [id], onDelete: Cascade)
+  obligationScore Float     @map("obligation_score")
+  resolved        Boolean   @default(false)
+  resolvedAt      DateTime? @map("resolved_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("gratitude_obligations")
+}
+
+// ─── Story Chapters ─────────────────────────────────────────────────────────────
+
+model StoryChapter {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapterNumber  Int      @map("chapter_number")
+  chapterTitle   String   @map("chapter_title")
+  generatedStory String   @map("generated_story")
+  periodStart    DateTime @map("period_start")
+  periodEnd      DateTime @map("period_end")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("story_chapters")
+}
+
+// ─── AI Mentor ──────────────────────────────────────────────────────────────────
+
+model MentorMessage {
+  id        String      @id @default(uuid())
+  userId    String      @map("user_id")
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      MessageRole
+  content   String
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@map("mentor_messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
