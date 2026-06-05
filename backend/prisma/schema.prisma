@@ -28,6 +28,7 @@ model User {
   gratitudeObligations GratitudeObligation[]
   storyChapters        StoryChapter[]
   mentorMessages       MentorMessage[]
+  wishes               Wish[]
 
   @@map("users")
 }
@@ -231,3 +232,22 @@ enum MessageRole {
   USER
   ASSISTANT
 }
+
+// ─── Wishes ─────────────────────────────────────────────────────────────────────
+
+model Wish {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  cost          Int      @default(100)
+  virtueName    String   @map("virtue_name")
+  requiredLevel Int      @default(1) @map("required_level")
+  status        String   @default("PENDING") // PENDING, UNLOCKED, GRANTED
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("wishes")
+}
+

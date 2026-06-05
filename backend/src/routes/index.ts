@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { authController } from '../controllers/auth.controller.js';
-import { actionController, virtueController, intentionController, blessingController, reflectionController, storyController, mentorController, userController, obligationController } from '../controllers/core.controller.js';
+import { actionController, virtueController, intentionController, blessingController, reflectionController, storyController, mentorController, userController, obligationController, wishController } from '../controllers/core.controller.js';
 import { aiService } from '../services/ai.service.js';
 import { authenticateToken } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
-import { registerSchema, loginSchema, refreshSchema, actionLogSchema, intentionSchema, intentionUpdateSchema, blessingSchema, reflectionSchema, mentorChatSchema, updateProfileSchema } from '../schemas/index.js';
+import { registerSchema, loginSchema, refreshSchema, actionLogSchema, intentionSchema, intentionUpdateSchema, blessingSchema, reflectionSchema, mentorChatSchema, updateProfileSchema, wishSchema } from '../schemas/index.js';
 
 const router = Router();
 
@@ -16,6 +16,10 @@ router.post('/auth/logout', authController.logout);
 
 // AI Status
 router.get('/ai/status', (_req, res) => {
+  res.json({ success: true, data: aiService.getStatus() });
+});
+router.post('/ai/status/reset', (_req, res) => {
+  aiService.resetStatus();
   res.json({ success: true, data: aiService.getStatus() });
 });
 
@@ -69,5 +73,11 @@ router.delete('/mentor/history', mentorController.clearHistory);
 // Obligations
 router.get('/obligations', obligationController.getAll);
 router.patch('/obligations/:id/resolve', obligationController.resolve);
+
+// Wishes
+router.get('/wishes', wishController.getAll);
+router.post('/wishes', validate(wishSchema), wishController.create);
+router.post('/wishes/:id/grant', wishController.grant);
+router.delete('/wishes/:id', wishController.remove);
 
 export default router;

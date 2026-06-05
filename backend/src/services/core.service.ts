@@ -312,7 +312,7 @@ export const userService = {
   },
 
   async getStats(userId: string) {
-    const [totalActions, goodActions, negativeActions, totalBlessings, totalReflections, activeIntentions, completedIntentions, readiness] = await Promise.all([
+    const [totalActions, goodActions, negativeActions, totalBlessings, totalReflections, activeIntentions, completedIntentions, readiness, totalWishes, grantedWishes] = await Promise.all([
       prisma.actionLog.count({ where: { userId } }),
       prisma.actionLog.count({ where: { userId, actionType: 'GOOD' } }),
       prisma.actionLog.count({ where: { userId, actionType: 'NEGATIVE' } }),
@@ -321,16 +321,18 @@ export const userService = {
       prisma.intention.count({ where: { userId, status: 'ACTIVE' } }),
       prisma.intention.count({ where: { userId, status: 'COMPLETED' } }),
       virtueService.getReadinessScore(userId),
+      prisma.wish.count({ where: { userId } }),
+      prisma.wish.count({ where: { userId, status: 'GRANTED' } }),
     ]);
 
-    return { totalActions, goodActions, negativeActions, totalBlessings, totalReflections, activeIntentions, completedIntentions, readiness };
+    return { totalActions, goodActions, negativeActions, totalBlessings, totalReflections, activeIntentions, completedIntentions, readiness, totalWishes, grantedWishes };
   },
 
   async getDashboard(userId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [virtues, recentActions, activeIntentions, recentBlessings, todayReflection, stats, obligations] = await Promise.all([
+    const [virtues, recentActions, activeIntentions, recentBlessings, todayReflection, stats, obligations, wishes] = await Promise.all([
       virtueService.getUserVirtues(userId),
       prisma.actionLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 5, include: { actionVirtues: { include: { virtue: true } } } }),
       prisma.intention.findMany({ where: { userId, status: 'ACTIVE' }, take: 5 }),
@@ -338,11 +340,82 @@ export const userService = {
       prisma.reflection.findFirst({ where: { userId, reflectionType: 'DAILY', createdAt: { gte: today } } }),
       userService.getStats(userId),
       prisma.gratitudeObligation.findMany({ where: { userId, resolved: false }, include: { blessing: true }, take: 3 }),
+      prisma.wish.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 5 }),
     ]);
 
     const user = await userService.getProfile(userId);
 
-    return { user, virtues, recentActions, activeIntentions, recentBlessings, todayReflection, stats, obligations };
+    return { user, virtues, recentActions, activeIntentions, recentBlessings, todayReflection, stats, obligations, wishes };
+  },
+};
+
+export const wishService = {
+  async getByUser(userId: string) {
+    return prisma.wish.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
+
+  async create(userId: string, title: string, description?: string) {
+    const analysis = await aiService.analyzeWish(title, description);
+
+    return prisma.wish.create({
+      data: {
+        userId,
+        title,
+        description,
+        virtueName: analysis.virtueName,
+        requiredLevel: analysis.requiredLevel,
+        cost: analysis.cost,
+        status: 'PENDING',
+      },
+    });
+  },
+
+  async grant(userId: string, wishId: string) {
+    const wish = await prisma.wish.findFirst({ where: { id: wishId, userId } });
+    if (!wish) throw new NotFoundError('Wish');
+    if (wish.status === 'GRANTED') {
+      throw new Error('Wish already granted');
+    }
+
+    const virtue = await prisma.virtue.findUnique({ where: { name: wish.virtueName } });
+    if (!virtue) throw new NotFoundError('Virtue');
+
+    const userVirtue = await prisma.userVirtue.findUnique({
+      where: { userId_virtueId: { userId, virtueId: virtue.id } },
+    });
+    if (!userVirtue) throw new Error('User virtue profile not found');
+
+    if (userVirtue.level < wish.requiredLevel) {
+      throw new Error(`You are not worthy yet. Required ${wish.virtueName} Level ${wish.requiredLevel}, current is Level ${userVirtue.level}.`);
+    }
+
+    const newScore = Math.max(0, userVirtue.score - wish.cost);
+    const newLevel = Math.floor(newScore / 100) + 1;
+
+    await prisma.$transaction([
+      prisma.userVirtue.update({
+        where: { id: userVirtue.id },
+        data: { score: newScore, level: newLevel },
+      }),
+      prisma.wish.update({
+        where: { id: wishId },
+        data: { status: 'GRANTED' },
+      }),
+    ]);
+
+    await updateAvatarStage(userId);
+
+    return { success: true, newScore, newLevel };
+  },
+
+  async remove(userId: string, wishId: string) {
+    const wish = await prisma.wish.findFirst({ where: { id: wishId, userId } });
+    if (!wish) throw new NotFoundError('Wish');
+    await prisma.wish.delete({ where: { id: wishId } });
+    return { success: true };
   },
 };
 

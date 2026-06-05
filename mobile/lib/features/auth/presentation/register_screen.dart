@@ -110,11 +110,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                     child: Container(
                       width: 80, height: 80,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [KarmaColors.accent, KarmaColors.primary]),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [BoxShadow(color: KarmaColors.accent.withValues(alpha: 0.4), blurRadius: 30, offset: const Offset(0, 10))],
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: KarmaColors.accent.withValues(alpha: 0.4),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                        border: Border.all(color: KarmaColors.accent.withValues(alpha: 0.5), width: 2),
                       ),
-                      child: const Icon(Icons.person_add, size: 40, color: Colors.white),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),

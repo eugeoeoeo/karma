@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { actionService, virtueService, intentionService, blessingService, reflectionService, storyService, mentorService, userService, obligationService } from '../services/core.service.js';
+import { actionService, virtueService, intentionService, blessingService, reflectionService, storyService, mentorService, userService, obligationService, wishService } from '../services/core.service.js';
 
 // ─── Actions ────────────────────────────────────────────────────────────────────
 
@@ -236,3 +236,36 @@ export const obligationController = {
     } catch (err) { next(err); }
   },
 };
+
+// ─── Wishes ─────────────────────────────────────────────────────────────────────
+
+export const wishController = {
+  async getAll(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await wishService.getByUser(req.user!.userId);
+      res.json({ success: true, data: result });
+    } catch (err) { next(err); }
+  },
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await wishService.create(req.user!.userId, req.body.title, req.body.description);
+      res.status(201).json({ success: true, data: result });
+    } catch (err) { next(err); }
+  },
+
+  async grant(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await wishService.grant(req.user!.userId, req.params.id as string);
+      res.json({ success: true, data: result });
+    } catch (err) { next(err); }
+  },
+
+  async remove(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await wishService.remove(req.user!.userId, req.params.id as string);
+      res.json({ success: true, data: result });
+    } catch (err) { next(err); }
+  },
+};
+

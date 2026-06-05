@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'providers.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
+import '../features/auth/presentation/splash_screen.dart';
 import '../features/home/presentation/home_shell.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/voice_log/presentation/voice_log_screen.dart';
@@ -14,6 +15,7 @@ import '../features/reflections/presentation/reflections_screen.dart';
 import '../features/story/presentation/story_screen.dart';
 import '../features/mentor/presentation/mentor_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/wishes/presentation/wishes_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -23,16 +25,21 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/home',
+    initialLocation: '/',
     redirect: (context, state) {
-      final isAuth = auth.state.status == AuthStatus.authenticated;
+      final status = auth.state.status;
+      if (status == AuthStatus.initial) {
+        return '/';
+      }
+      final isAuth = status == AuthStatus.authenticated;
       final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register';
 
       if (!isAuth && !isAuthRoute) return '/login';
-      if (isAuth && isAuthRoute) return '/home';
+      if (isAuth && (isAuthRoute || state.matchedLocation == '/')) return '/home';
       return null;
     },
     routes: [
+      GoRoute(path: '/', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(
@@ -56,6 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/reflections', builder: (_, __) => const ReflectionsScreen()),
           GoRoute(path: '/story', builder: (_, __) => const StoryScreen()),
           GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: '/wishes', builder: (_, __) => const WishesScreen()),
         ],
       ),
     ],

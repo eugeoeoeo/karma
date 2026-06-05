@@ -18,6 +18,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     await ref.read(authProvider).logout();
   }
 
+  Future<void> _showEditProfileDialog() async {
+    final user = ref.read(authProvider).state.user ?? {};
+    final controller = TextEditingController(text: user['username'] ?? '');
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: KarmaColors.surface,
+        title: Text('Edit Profile', style: GoogleFonts.outfit(color: KarmaColors.textPrimary)),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: KarmaColors.textPrimary),
+          decoration: const InputDecoration(
+            labelText: 'Username',
+            hintText: 'Enter new username',
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel', style: TextStyle(color: KarmaColors.textHint)),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          GradientButton(
+            text: 'Save',
+            width: 100,
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isEmpty) return;
+
+              final success = await ref.read(authProvider).updateProfile(newName);
+              if (success) {
+                ref.invalidate(dashboardProvider);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile updated successfully! ✨'), backgroundColor: KarmaColors.good),
+                  );
+                }
+              } else {
+                if (ctx.mounted) {
+                  final error = ref.read(authProvider).state.error ?? 'Failed to update profile';
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(error), backgroundColor: KarmaColors.negative),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
@@ -94,13 +147,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Account Details',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: KarmaColors.textPrimary,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Account Details',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: KarmaColors.textPrimary,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: KarmaColors.primaryLight, size: 18),
+                          onPressed: _showEditProfileDialog,
+                        ),
+                      ],
                     ),
                     const Divider(color: KarmaColors.surfaceLighter, height: 24),
                     _ProfileRow(label: 'Username', value: user['username'] ?? 'N/A'),

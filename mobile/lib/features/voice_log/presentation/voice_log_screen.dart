@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
@@ -35,8 +36,21 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> with TickerProv
   }
 
   Future<void> _initSpeech() async {
-    _speechAvailable = await _speech.initialize();
-    setState(() {});
+    try {
+      final status = await Permission.microphone.request();
+      if (status.isGranted) {
+        _speechAvailable = await _speech.initialize(
+          onError: (val) => debugPrint('Speech error: $val'),
+          onStatus: (val) => debugPrint('Speech status: $val'),
+        );
+      } else {
+        _speechAvailable = false;
+      }
+    } catch (e) {
+      debugPrint('Speech init exception: $e');
+      _speechAvailable = false;
+    }
+    if (mounted) setState(() {});
   }
 
   @override

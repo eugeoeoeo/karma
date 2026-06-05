@@ -92,11 +92,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                       child: Container(
                         width: 80, height: 80,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [KarmaColors.primary, KarmaColors.accent]),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: KarmaColors.primary.withValues(alpha: 0.4), blurRadius: 30, offset: const Offset(0, 10))],
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: KarmaColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 30,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                          border: Border.all(color: KarmaColors.primary.withValues(alpha: 0.5), width: 2),
                         ),
-                        child: const Icon(Icons.auto_awesome, size: 40, color: Colors.white),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),

@@ -122,32 +122,66 @@ class AuthNotifier extends ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<bool> updateProfile(String username) async {
+    _state = _state.copyWith(status: AuthStatus.loading, error: null);
+    notifyListeners();
+    try {
+      final response = await _api.patch('/user/profile', data: {'username': username});
+      if (response.data['success'] == true) {
+        _state = _state.copyWith(status: AuthStatus.authenticated, user: response.data['data']);
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      _state = _state.copyWith(status: AuthStatus.authenticated, error: _parseError(e));
+      notifyListeners();
+    }
+    return false;
+  }
+
+  Future<void> resetAIStatus() async {
+    try {
+      final response = await _api.post('/ai/status/reset');
+      if (response.data['success'] == true) {
+        _state = _state.copyWith(aiAvailable: response.data['data']['available'] == true);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
   String _parseError(dynamic e) {
-    // Handle DioException correctly
+    // Show detailed debug errors during development
     if (e is DioException) {
+      final url = e.requestOptions.uri.toString();
+      final statusCode = e.response?.statusCode;
+
       // Server returned an error response
       if (e.response != null) {
         final data = e.response!.data;
         if (data is Map && data['error'] != null) {
-          return data['error'].toString();
+          return '[${statusCode}] ${data['error']} (URL: $url)';
         }
         if (data is Map && data['message'] != null) {
-          return data['message'].toString();
+          return '[${statusCode}] ${data['message']} (URL: $url)';
         }
+        return '[$statusCode] Server error (URL: $url)';
       }
-      // Network/timeout errors
+
+      // Network/timeout errors - show full debug info
       switch (e.type) {
         case DioExceptionType.connectionTimeout:
+          return 'TIMEOUT connecting to: $url';
         case DioExceptionType.receiveTimeout:
+          return 'TIMEOUT receiving from: $url';
         case DioExceptionType.sendTimeout:
-          return 'Server is starting up, please wait a moment and try again.';
+          return 'TIMEOUT sending to: $url';
         case DioExceptionType.connectionError:
-          return 'Cannot reach server. Check your internet connection.';
+          return 'CONNECTION ERROR to: $url\n${e.message ?? "No details"}';
         default:
-          return 'Connection failed. Please try again.';
+          return 'DIO ERROR [${e.type}]: ${e.message}\nURL: $url';
       }
     }
-    return 'Something went wrong. Please try again.';
+    return 'ERROR: ${e.runtimeType}: $e';
   }
 }
 
@@ -214,3 +248,10 @@ final aiStatusProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) 
   final response = await ApiClient().get('/ai/status');
   return response.data['data'];
 });
+
+// Wishes
+final wishesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final response = await ApiClient().get('/wishes');
+  return response.data['data'];
+});
+

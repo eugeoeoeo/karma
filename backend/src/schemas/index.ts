@@ -53,3 +53,9 @@ export const updateProfileSchema = z.object({
   username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/).optional(),
   profilePicture: z.string().url().optional(),
 });
+
+export const wishSchema = z.object({
+  title: z.string().min(1, 'Wish title required').max(200),
+  description: z.string().max(2000).optional(),
+});
+

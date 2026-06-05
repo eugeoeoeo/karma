@@ -25,10 +25,18 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   Future<void> _load() async {
     try {
       final r = await ApiClient().get('/mentor/history');
-      if (r.data['success'] == true) setState(() => _msgs = (r.data['data'] as List).map<Map<String, String>>((m) => {'role': m['role'] ?? '', 'content': m['content'] ?? ''}).toList());
-      final s = await ApiClient().get('/ai/status');
-      if (s.data['success'] == true) setState(() => _aiOn = s.data['data']['available'] ?? true);
+      if (r.data['success'] == true) {
+        setState(() => _msgs = (r.data['data'] as List).map<Map<String, String>>((m) => {'role': m['role'] ?? '', 'content': m['content'] ?? ''}).toList());
+      }
     } catch (_) {}
+
+    try {
+      final s = await ApiClient().get('/ai/status');
+      if (s.data['success'] == true) {
+        setState(() => _aiOn = s.data['data']['available'] ?? true);
+      }
+    } catch (_) {}
+
     _scrollEnd();
   }
 
@@ -73,7 +81,38 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         actions: [IconButton(icon: const Icon(Icons.delete_outline, color: KarmaColors.textHint), onPressed: () async { await ApiClient().delete('/mentor/history'); setState(() => _msgs.clear()); })],
       ),
       body: Column(children: [
-        if (!_aiOn) Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), color: KarmaColors.warning.withValues(alpha: 0.1), child: const Row(children: [Icon(Icons.info_outline, size: 16, color: KarmaColors.warning), SizedBox(width: 8), Expanded(child: Text('AI mentor is offline. Responses are pre-written guidance, not personalized AI.', style: TextStyle(fontSize: 11, color: KarmaColors.warning)))])),
+        if (!_aiOn)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: KarmaColors.warning.withValues(alpha: 0.1),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 16, color: KarmaColors.warning),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'AI mentor is offline. Responses are pre-written.',
+                    style: TextStyle(fontSize: 11, color: KarmaColors.warning),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    await ref.read(authProvider).resetAIStatus();
+                    _load();
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(color: KarmaColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Expanded(child: _msgs.isEmpty
           ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.psychology, size: 64, color: KarmaColors.surfaceLighter), const SizedBox(height: 16), Text('Ask for guidance', style: GoogleFonts.outfit(fontSize: 20, color: KarmaColors.textSecondary))]))
           : ListView.builder(controller: _scroll, padding: const EdgeInsets.all(16), itemCount: _msgs.length + (_sending ? 1 : 0), itemBuilder: (_, i) {

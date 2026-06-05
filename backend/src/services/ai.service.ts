@@ -299,11 +299,67 @@ async function geminiMentorChat(messages: { role: string; content: string }[], u
   }
 }
 
+async function geminiAnalyzeWish(title: string, description?: string): Promise<{ virtueName: string; requiredLevel: number; cost: number }> {
+  const model = getModel();
+  const input = description ? `${title}: ${description}` : title;
+  const fallback = { virtueName: 'Discipline', requiredLevel: 2, cost: 100 };
+
+  if (!model || !aiAvailable) return localWishAnalysis(input);
+
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `Analyze this wish. Choose the most relevant virtue from: Kindness,Discipline,Honesty,Courage,Wisdom,Gratitude,Patience,Responsibility,Humility,Compassion,Perseverance,Generosity. Determine required level (1 to 5) based on difficulty. Reply ONLY valid JSON: {"v":"VirtueName","l":number} Wish: "${input}"` }] }],
+      generationConfig: { maxOutputTokens: 50, temperature: 0.2 },
+    });
+
+    const raw = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = JSON.parse(raw);
+    markAISuccess();
+
+    const lvl = Math.min(5, Math.max(1, parsed.l || 2));
+    const cost = (lvl - 1) * 100;
+    return { virtueName: parsed.v || 'Discipline', requiredLevel: lvl, cost };
+  } catch (err) {
+    logger.error(err, 'Gemini wish analysis failed');
+    markAIError();
+    return localWishAnalysis(input);
+  }
+}
+
+function localWishAnalysis(input: string): { virtueName: string; requiredLevel: number; cost: number } {
+  const lower = input.toLowerCase();
+  let virtueName = 'Discipline';
+  let level = 2;
+
+  if (lower.includes('help') || lower.includes('kind') || lower.includes('share') || lower.includes('give')) {
+    virtueName = 'Kindness';
+  } else if (lower.includes('study') || lower.includes('learn') || lower.includes('read') || lower.includes('wise')) {
+    virtueName = 'Wisdom';
+  } else if (lower.includes('calm') || lower.includes('wait') || lower.includes('angry') || lower.includes('temper')) {
+    virtueName = 'Patience';
+  } else if (lower.includes('clean') || lower.includes('chore') || lower.includes('work') || lower.includes('job')) {
+    virtueName = 'Responsibility';
+  } else if (lower.includes('truth') || lower.includes('lie') || lower.includes('honest')) {
+    virtueName = 'Honesty';
+  } else if (lower.includes('fear') || lower.includes('brave') || lower.includes('try')) {
+    virtueName = 'Courage';
+  }
+
+  if (lower.includes('hard') || lower.includes('difficult') || lower.includes('stop') || lower.includes('habit')) {
+    level = 3;
+  } else if (lower.includes('huge') || lower.includes('perfect') || lower.includes('master')) {
+    level = 4;
+  }
+
+  return { virtueName, requiredLevel: level, cost: (level - 1) * 100 };
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────────
 
 export const aiService = {
   analyzeAction: geminiAnalyzeAction,
   analyzeBlessing: geminiAnalyzeBlessing,
+  analyzeWish: geminiAnalyzeWish,
 
   async generateReflection(actions: any[], blessings: any[], intentions: any[], type: string) {
     return geminiReflection(actions, blessings, intentions, type);

@@ -29,10 +29,15 @@ class HomeScreen extends ConsumerWidget {
                 Container(
                   width: 36, height: 36,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [KarmaColors.primary, KarmaColors.accent]),
-                    borderRadius: BorderRadius.circular(10),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: KarmaColors.primary.withValues(alpha: 0.5), width: 1.5),
                   ),
-                  child: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text('Karma', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700)),
@@ -103,6 +108,7 @@ class HomeScreen extends ConsumerWidget {
                         _QuickAction(icon: Icons.remove_circle_outline, label: 'Growth Area', color: KarmaColors.negative, onTap: () => _logAction(context, ref, 'NEGATIVE')),
                         _QuickAction(icon: Icons.favorite_outline, label: 'Blessing', color: KarmaColors.accent, onTap: () => context.go('/blessings')),
                         _QuickAction(icon: Icons.flag_outlined, label: 'Intention', color: KarmaColors.wisdom, onTap: () => context.go('/intentions')),
+                        _QuickAction(icon: Icons.auto_awesome, label: 'Wishes', color: KarmaColors.primary, onTap: () => context.go('/wishes')),
                       ],
                     ),
                   ),
@@ -138,6 +144,84 @@ class HomeScreen extends ConsumerWidget {
                         },
                       ),
                     ),
+                  ],
+
+                  // ─── Wishes & Worthiness ──────────────
+                  if (dashboard.value?['wishes'] != null && (dashboard.value?['wishes'] as List).isNotEmpty) ...[
+                    SectionHeader(title: 'Wishes & Worthiness', actionText: 'See All', onAction: () => context.go('/wishes')),
+                    ...(dashboard.value?['wishes'] as List).take(2).map((w) {
+                      final title = w['title'] ?? 'Wish';
+                      final virtueName = w['virtueName'] ?? '';
+                      final reqLevel = w['requiredLevel'] ?? 1;
+                      final status = w['status'] ?? 'PENDING';
+                      
+                      final uv = virtues.firstWhere(
+                        (element) => (element['virtue']?['name'] as String?)?.toLowerCase() == virtueName.toLowerCase(),
+                        orElse: () => null,
+                      );
+                      final userLevel = uv?['level'] ?? 1;
+                      final isWorthy = userLevel >= reqLevel;
+
+                      return GlassCard(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            status == 'GRANTED'
+                                ? Icons.check_circle_outline
+                                : isWorthy
+                                    ? Icons.lock_open_rounded
+                                    : Icons.lock_outline,
+                            color: status == 'GRANTED'
+                                ? KarmaColors.good
+                                : isWorthy
+                                    ? KarmaColors.primaryLight
+                                    : KarmaColors.textHint,
+                          ),
+                          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: KarmaColors.textPrimary)),
+                          subtitle: Text(
+                            status == 'GRANTED'
+                                ? 'Granted!'
+                                : 'Needs $virtueName Level $reqLevel (You: Level $userLevel)',
+                            style: TextStyle(
+                              color: status == 'GRANTED'
+                                  ? KarmaColors.goodLight
+                                  : isWorthy
+                                      ? KarmaColors.primaryLight
+                                      : KarmaColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: status == 'GRANTED'
+                                  ? KarmaColors.good.withValues(alpha: 0.1)
+                                  : isWorthy
+                                      ? KarmaColors.primary.withValues(alpha: 0.1)
+                                      : KarmaColors.surfaceLighter,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              status == 'GRANTED'
+                                  ? 'Granted'
+                                  : isWorthy
+                                      ? 'Worthy'
+                                      : 'Locked',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: status == 'GRANTED'
+                                    ? KarmaColors.good
+                                    : isWorthy
+                                        ? KarmaColors.primaryLight
+                                        : KarmaColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   ],
 
                   // ─── Obligations Warning ──────────────
@@ -197,35 +281,73 @@ class HomeScreen extends ConsumerWidget {
 
   Future<void> _logAction(BuildContext context, WidgetRef ref, String type) async {
     final controller = TextEditingController();
-    final result = await showModalBottomSheet<String>(
+    bool honestPledge = true;
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        decoration: const BoxDecoration(
-          color: KarmaColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: KarmaColors.surfaceLighter, borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 20),
-          Text(type == 'GOOD' ? '✨ Log Good Action' : '🌱 Log Growth Area', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700, color: KarmaColors.textPrimary)),
-          const SizedBox(height: 16),
-          TextField(controller: controller, maxLines: 3, autofocus: true, style: const TextStyle(color: KarmaColors.textPrimary), decoration: InputDecoration(hintText: type == 'GOOD' ? 'What good did you do?' : 'What could you improve?')),
-          const SizedBox(height: 20),
-          GradientButton(
-            text: 'Log Action',
-            colors: type == 'GOOD' ? [KarmaColors.good, KarmaColors.goodLight] : [KarmaColors.negative, KarmaColors.negativeLight],
-            onPressed: () => Navigator.pop(ctx, controller.text),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Container(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          decoration: const BoxDecoration(
+            color: KarmaColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-        ]),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: KarmaColors.surfaceLighter, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 20),
+            Text(type == 'GOOD' ? '✨ Log Good Action' : '🌱 Log Growth Area', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700, color: KarmaColors.textPrimary)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              autofocus: true,
+              style: const TextStyle(color: KarmaColors.textPrimary),
+              decoration: InputDecoration(hintText: type == 'GOOD' ? 'What good did you do?' : 'What could you improve?'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Checkbox(
+                  value: honestPledge,
+                  activeColor: KarmaColors.primary,
+                  onChanged: (val) {
+                    setModalState(() {
+                      honestPledge = val ?? true;
+                    });
+                  },
+                ),
+                Expanded(
+                  child: Text(
+                    'I pledge under my conscience that this is 100% honest and accurate.',
+                    style: TextStyle(color: KarmaColors.textSecondary, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GradientButton(
+              text: 'Log Action',
+              colors: type == 'GOOD' ? [KarmaColors.good, KarmaColors.goodLight] : [KarmaColors.negative, KarmaColors.negativeLight],
+              onPressed: () {
+                if (honestPledge) {
+                  Navigator.pop(ctx, {'text': controller.text});
+                } else {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('You must pledge honesty to log actions.'), backgroundColor: KarmaColors.warning)
+                  );
+                }
+              },
+            ),
+          ]),
+        ),
       ),
     );
 
-    if (result != null && result.isNotEmpty) {
+    if (result != null && result['text'] != null && (result['text'] as String).isNotEmpty) {
       try {
-        await ApiClient().post('/actions', data: {'actionText': result, 'actionType': type, 'source': 'TEXT'});
+        await ApiClient().post('/actions', data: {'actionText': result['text'], 'actionType': type, 'source': 'TEXT'});
         ref.invalidate(dashboardProvider);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action logged! ✨'), backgroundColor: KarmaColors.surfaceLighter));
