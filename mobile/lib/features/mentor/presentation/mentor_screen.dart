@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../app/providers.dart';
 
 class MentorScreen extends ConsumerStatefulWidget {
   const MentorScreen({super.key});
