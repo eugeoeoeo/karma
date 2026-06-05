@@ -44,6 +44,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
   Future<void> _register() async {
     setState(() => _localError = null);
 
+    if (_emailController.text.trim().isEmpty || _usernameController.text.trim().isEmpty) {
+      setState(() => _localError = 'Please fill in all fields');
+      return;
+    }
     if (_passwordController.text != _confirmController.text) {
       setState(() => _localError = 'Passwords do not match');
       return;
@@ -66,6 +70,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     final auth = ref.watch(authProvider);
     final isLoading = auth.state.status == AuthStatus.loading;
     final error = _localError ?? auth.state.error;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: Container(
@@ -84,7 +89,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
+                  SizedBox(height: screenHeight * 0.05),
+                  // Cold-start warning banner
+                  if (isLoading)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C5CE7).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF6C5CE7).withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(children: [
+                        SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF6C5CE7))),
+                        SizedBox(width: 10),
+                        Expanded(child: Text('Connecting to server... (first start may take up to 60s)', style: TextStyle(fontSize: 12, color: Color(0xFF6C5CE7)))),
+                      ]),
+                    ),
                   Center(
                     child: Container(
                       width: 80, height: 80,

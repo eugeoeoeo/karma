@@ -49,6 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
     final isLoading = auth.state.status == AuthStatus.loading;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: Container(
@@ -69,8 +70,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 60),
-
+                    SizedBox(height: screenHeight * 0.07),
+                    // Cold-start warning banner
+                    if (isLoading)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: KarmaColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: KarmaColors.primary.withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(children: [
+                          SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 1.5, color: KarmaColors.primary)),
+                          SizedBox(width: 10),
+                          Expanded(child: Text('Connecting to server... (first start may take up to 60s)', style: TextStyle(fontSize: 12, color: KarmaColors.primary))),
+                        ]),
+                      ),
                     // Logo area
                     Center(
                       child: Container(

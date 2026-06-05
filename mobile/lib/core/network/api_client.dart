@@ -14,8 +14,10 @@ class ApiClient {
 
     dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 30),
+      // Increased timeouts to handle Render free tier cold starts (can take 50-90s)
+      connectTimeout: const Duration(seconds: 90),
+      receiveTimeout: const Duration(seconds: 90),
+      sendTimeout: const Duration(seconds: 90),
       headers: {'Content-Type': 'application/json'},
     ));
 
@@ -51,7 +53,10 @@ class ApiClient {
       if (refreshToken == null) return false;
 
       final baseUrl = dotenv.env['API_URL'] ?? 'http://10.0.2.2:3000/api';
-      final response = await Dio().post(
+      final response = await Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 90),
+        receiveTimeout: const Duration(seconds: 90),
+      )).post(
         '$baseUrl/auth/refresh',
         data: {'refreshToken': refreshToken},
       );

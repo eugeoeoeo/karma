@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 import '../core/network/api_client.dart';
 
 // ─── Auth State ─────────────────────────────────────────────────────────────────
@@ -122,13 +123,31 @@ class AuthNotifier extends ChangeNotifier {
   }
 
   String _parseError(dynamic e) {
-    try {
-      if (e is Exception && e.toString().contains('DioException')) {
-        final dynamic dioErr = e;
-        return dioErr.response?.data?['error'] ?? 'Connection failed';
+    // Handle DioException correctly
+    if (e is DioException) {
+      // Server returned an error response
+      if (e.response != null) {
+        final data = e.response!.data;
+        if (data is Map && data['error'] != null) {
+          return data['error'].toString();
+        }
+        if (data is Map && data['message'] != null) {
+          return data['message'].toString();
+        }
       }
-    } catch (_) {}
-    return 'Something went wrong';
+      // Network/timeout errors
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.receiveTimeout:
+        case DioExceptionType.sendTimeout:
+          return 'Server is starting up, please wait a moment and try again.';
+        case DioExceptionType.connectionError:
+          return 'Cannot reach server. Check your internet connection.';
+        default:
+          return 'Connection failed. Please try again.';
+      }
+    }
+    return 'Something went wrong. Please try again.';
   }
 }
 

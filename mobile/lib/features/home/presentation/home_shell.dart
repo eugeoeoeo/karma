@@ -18,11 +18,14 @@ class HomeShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = _getIndex(context);
+    // Adaptive bottom bar height based on safe area
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final navBarHeight = 60.0 + bottomPadding;
 
     return Scaffold(
       body: child,
       floatingActionButton: Container(
-        height: 64, width: 64,
+        height: 60, width: 60,
         decoration: BoxDecoration(
           gradient: const LinearGradient(colors: [KarmaColors.primary, KarmaColors.accent]),
           shape: BoxShape.circle,
@@ -32,11 +35,12 @@ class HomeShell extends StatelessWidget {
           onPressed: () => context.push('/voice-log'),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          child: const Icon(Icons.mic, size: 28, color: Colors.white),
+          child: const Icon(Icons.mic, size: 26, color: Colors.white),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: Container(
+        height: navBarHeight,
         decoration: BoxDecoration(
           color: KarmaColors.surface,
           border: Border(top: BorderSide(color: KarmaColors.surfaceLighter.withValues(alpha: 0.5), width: 0.5)),
@@ -44,7 +48,7 @@ class HomeShell extends StatelessWidget {
         child: BottomAppBar(
           color: Colors.transparent,
           elevation: 0,
-          height: 70,
+          padding: EdgeInsets.only(bottom: bottomPadding),
           notchMargin: 8,
           shape: const CircularNotchedRectangle(),
           child: Row(
@@ -77,16 +81,17 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 64,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              child: Icon(icon, size: 24, color: selected ? KarmaColors.primary : KarmaColors.textHint),
+              child: Icon(icon, size: 22, color: selected ? KarmaColors.primary : KarmaColors.textHint),
             ),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 11, color: selected ? KarmaColors.primary : KarmaColors.textHint, fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
+            const SizedBox(height: 3),
+            Text(label, style: TextStyle(fontSize: 10, color: selected ? KarmaColors.primary : KarmaColors.textHint, fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
           ],
         ),
       ),
